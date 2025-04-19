@@ -1,0 +1,25 @@
+<%- include('partials/header') %>
+<div class="main-container flex h-screen w-full" style="background: rgba(0,0,0,.6);backdrop-filter: blur(1px);">
+    <%- include('components/sidebar', { users, groups, senderUser }) %>
+    <div class="chat_box relative w-full flex justify-center items-center flex flex-col h-full overflow-hidden">
+        <h1 class="text-2xl">Please Select any Chat for Continue Chats</h1>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    // Automatically connect after login
+    const socket = io(); // Token cookie se auto authenticate hoga
+
+    let currentUserId = "<%= senderUser._id %>" // Current user ID
+
+    socket.emit("user-connected", currentUserId); 
+
+    socket.on("connect", () => {
+        console.log("Connected to server");
+    });
+
+    socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+    });
+</script>
+<%- include('partials/footer') %>

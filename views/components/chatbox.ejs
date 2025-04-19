@@ -1,0 +1,568 @@
+<div class="chat_box relative w-full flex flex-col h-full overflow-hidden">
+  <div
+    class="w-full flex justify-between items-center border-b-1 border-zinc-500"
+    style="padding: 15px 20px"
+  >
+    <div class="flex items-center gap-[10px]">
+      <a href="/chat">
+        <i class="ri-arrow-left-s-line"></i>
+      </a>
+      <img
+        class="w-[40px] h-[40px] object-cover rounded-full"
+        src="<%= receiverUser.profilePic || 'https://static.vecteezy.com/system/resources/previews/036/594/092/non_2x/man-empty-avatar-photo-placeholder-for-social-networks-resumes-forums-and-dating-sites-male-and-female-no-photo-images-for-unfilled-user-profile-free-vector.jpg' %>"
+        alt=""
+      />
+      <div>
+        <h1><%= receiverUser.username %></h1>
+        <p
+          class="user-status status-<%= receiverUser._id %> text-xs text-zinc-400"
+          data-receiver="<%= receiverUser._id %>"
+        ></p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a
+        id="videoCallBtn"
+        href=""
+        class="h-[40px] w-[40px] flex items-center justify-center hover:bg-zinc-900 block"
+      >
+        <i class="ri-video-on-fill"></i>
+      </a>
+    </div>
+  </div>
+  <%- include('../callingcomponents/videocall', senderUser, receiverUser) %> <%-
+  include('../callingcomponents/receivevideo', receiverUser) %>
+
+  <div
+    id="chatContainer"
+    class="message_containers flex flex-col gap-2 h-full z-1 overflow-y-[auto]"
+    style="padding: 10px"
+    data-receiver="<%= receiverUser._id %>"
+  >
+    <!-- <div class="incoming_message w-full flex items-center justify-start">
+            <div class="w-[fit-content] bg-zinc-900 max-w-[330px]" style="padding: 10px 15px; border-radius: 0px 10px 10px 10px;">
+                <h1>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eum alias rem distinctio quis rerum voluptatibus beatae maxime id explicabo sequi accusamus, est numquam voluptate quasi soluta aut consectetur magnam vero.</h1>
+            </div>
+        </div>
+        <div class="outgoing_message w-full flex items-center justify-end">
+            <div class="bg-blue-600 w-[fit-content] max-w-[330px]" style="padding: 10px 15px; border-radius: 10px 0px 10px 10px;">
+                <h1>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Eum alias rem distinctio quis rerum voluptatibus beatae maxime id explicabo sequi accusamus, est numquam voluptate quasi soluta aut consectetur magnam vero.</h1>
+            </div>
+        </div> -->
+    <%- include('loader') %>
+  </div>
+  <div
+    class="flex border-t-1 border-zinc-500"
+    style="padding: 10px; padding-left: 20px"
+  >
+    <input
+      type="text"
+      id="messageInput"
+      placeholder="Type a message..."
+      class="w-full outline-none"
+    />
+    <button
+      type="button"
+      onclick="sendMessage()"
+      class="w-[40px] h-[40px] cursor-pointer bg-blue-600"
+    >
+      <i class="ri-send-plane-fill"></i>
+    </button>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var messageContainer = document.querySelector(".message_containers");
+    if (messageContainer) {
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+  });
+
+  const socket = io();
+  const chatMessages = document.querySelector(".message_containers");
+  const messageInput = document.getElementById("messageInput");
+
+  const receiverId = "<%= receiverUser._id %>";
+  const currentUserId = "<%= senderUser._id %>";
+
+  document.querySelector(".user-status").innerHTML =
+    localStorage.getItem(`online-${receiverId}`) ||
+    `Last seen at ${localStorage.getItem(`lastSeen-${receiverId}`)}` ||
+    "";
+
+  socket.emit("user-connected", currentUserId);
+
+  const onlineUsers = new Set();
+
+  // console.log(receiverId, currentUserId);
+
+  // ✅ Load messages on page load
+  async function loadMessages() {
+    try {
+      const response = await fetch(`/chat/${receiverId}/messages`);
+      const messages = await response.json();
+
+      // console.log(messages, "messages from server");
+
+      chatMessages.innerHTML = ""; // ✅ Clear previous messages
+
+      messages.forEach((msg) => {
+        displayMessage(msg, msg.senderId === currentUserId);
+      });
+
+      scrollToBottom(); // 🔽 Auto-scroll
+    } catch (error) {
+      console.error("Error loading messages:", error);
+    }
+  }
+
+  // ✅ Send message function
+  function sendMessage() {
+    const content = messageInput.value.trim();
+    if (!content) return;
+
+    const messageData = { senderId: currentUserId, receiverId, content };
+
+    socket.emit("sendMessage", messageData);
+    // console.log("send message successfully", messageData);
+
+    displayMessage(messageData, true); // ✅ Apne message turant UI me dikhana
+    messageInput.value = ""; // ✨ Input clear
+    scrollToBottom();
+  }
+
+  // ✅ Display message dynamically
+  function displayMessage(message, isOutgoing) {
+    const div = document.createElement("div");
+    div.classList.add(
+      "w-full",
+      "flex",
+      "items-center",
+      isOutgoing ? "justify-end" : "justify-start"
+    );
+
+    div.innerHTML = `
+        <div class="${
+          isOutgoing ? "bg-blue-600" : "bg-zinc-900"
+        } flex items-end gap-2 w-[fit-content] relative max-w-[330px]" 
+             style="padding: 6px 12px; border-radius: ${
+               isOutgoing ? "10px 0px 10px 10px" : "0px 10px 10px 10px"
+             };">
+            <h1>${message.content || message.message}</h1>
+            <span class="text-[8px] ${
+              isOutgoing ? "right-2" : "left-2"
+            }">${formatMongoDate(message.timestamp)}</span>
+        </div>
+    `;
+
+    chatMessages.appendChild(div);
+    scrollToBottom();
+  }
+
+  // conver mongodb date to dd/mm/yy format
+  function formatMongoDate(isoDate) {
+    if (!isoDate) return ""; // ✅ Blank string instead of "N/A"
+
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return ""; // ✅ Invalid date handle karein
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}/${month}/${year}`;
+  }
+
+  // ✅ Receive message in real-time
+  socket.on("receiveMessage", (message) => {
+    // console.log("New Message Received:", message);
+
+    if (message.senderId === receiverId) {
+      // ✅ Ensure message is for this chat
+      displayMessage(message, false);
+      scrollToBottom();
+    }
+  });
+
+  // ✅ Scroll chat to bottom
+  function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // handle user typing
+  messageInput.addEventListener("keydown", () => {
+    socket.emit("typing", {
+      sender: currentUserId,
+      receiver: receiverId,
+    });
+  });
+
+  // user online
+  socket.on("user-online", (userId) => {
+    onlineUsers.add(userId);
+    const el = document.querySelector(`.status-${userId}`);
+    localStorage.setItem(
+      `online-${userId}`,
+        `
+            <span class="text-green-600 font-semibold">Online</span>
+        `
+    );
+    localStorage.setItem(`lastSeen-${userId}`, "");
+    if (el) {
+      el.innerHTML = localStorage.getItem("online");
+    }
+  });
+
+  // user offline
+  socket.on("user-offline", ({ userId, lastSeen }) => {
+    onlineUsers.delete(userId); // ❌ Remove from online users
+
+    const el = document.querySelector(`.status-${userId}`);
+    if (el) {
+      const time = new Date(lastSeen).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      localStorage.setItem(`lastSeen-${userId}`, time);
+      localStorage.setItem(`online-${userId}`, "");
+      el.innerText = `Last seen at ${localStorage.getItem(
+        `lastSeen-${userId}`
+      )}`;
+    }
+  });
+
+  document
+    .querySelectorAll(`.user-status status-${receiverId}`)
+    .forEach((el) => {
+      const userId = el.dataset.userId;
+      const lastSeen = localStorage.getItem(`lastSeen-${userId}`);
+      const onlineStatus = localStorage.getItem(`online-${userId}`);
+
+      if (onlineStatus) {
+        el.innerHTML = onlineStatus;
+      } else if (lastSeen) {
+        const time = new Date(lastSeen).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        el.innerText = `Last seen at ${time}`;
+      }
+    });
+
+  // page reload per time show karo
+  document.querySelectorAll(".user-status").forEach((el) => {
+    const userId = el.dataset.userId;
+    const lastSeen = localStorage.getItem(`lastSeen-${userId}`);
+
+    if (lastSeen) {
+      const time = new Date(lastSeen).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      el.innerText = `Last seen at ${time}`;
+    }
+  });
+
+  // catch the user typing
+  socket.on("displayTyping", (senderId) => {
+    const typingIndicator = document.querySelector(".user-status");
+
+    // ✅ Make sure you're chatting with the sender
+    if (receiverId === senderId && typingIndicator) {
+      typingIndicator.innerHTML = `<span class="text-green-600 font-semibold">Typing...</span>`;
+      setTimeout(() => {
+        typingIndicator.innerHTML =
+          localStorage.getItem(`online-${receiverId}`) ||
+          `Last seen at ${localStorage.getItem(`lastSeen-${receiverId}`)}` ||
+          "";
+      }, 1000);
+    }
+  });
+
+
+
+  // creating the video call ui feature outgoing and incoming
+  function showcallingUI() {
+    const videoCallModal = document.querySelector('#videomodel');
+    videoCallModal.style.display = "block";
+  }
+
+  function hidecallingUI() {
+    const videoCallModal = document.querySelector('#videomodel');
+    videoCallModal.style.display = "none";
+  }
+
+  function showIncomingCallingUI() {
+    const videoincomingModal = document.querySelector('#receiveVideoModal');
+    videoincomingModal.style.display = "flex"
+  }
+
+  function hideIncomingCallingUI() {
+    const videoincomingModal = document.querySelector('#receiveVideoModal');
+    videoincomingModal.style.display = "none"
+  }
+
+  const videoCallBtn = document.getElementById("videoCallBtn");
+
+  const localVideo = document.querySelector('#localVideo');
+  const remoteVideo = document.querySelector('#remoteVideo');
+
+  let callingTimeOut1;
+  let callingTimeOut2;
+
+  let inCall = false;
+
+  const ringtone = new Audio('/sounds/ringtone.mp3');
+  document.addEventListener('click', () => {
+    ringtone.preload = "auto";
+    ringtone.load();
+  })
+
+
+  videoCallBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    localVideo.srcObject = await navigator.mediaDevices.getUserMedia({video: true, audio: true });
+
+    socket.emit('initiate-call', ({
+      to: receiverId,
+      from: currentUserId
+    }))
+
+    showcallingUI();
+
+    if(inCall === false) {
+      callingTimeOut1 = setTimeout(() => {
+        document.querySelector('#calling-status').innerHTML = "Not Answering"
+      }, 20000);
+  
+      callingTimeOut2 = setTimeout(() => {
+        hidecallingUI();
+      }, 22000);
+    }
+
+  })
+
+  document.querySelector('#cancelvidBtn').addEventListener('click', () => {
+      hidecallingUI();
+      hangUp;
+      socket.emit('cencel-call', {from: currentUserId, to: receiverId})
+  })
+
+  socket.on('incoming-call', ({ from }) => {
+    console.log('incoming call from', from)
+
+    showIncomingCallingUI();
+    ringtone.play()
+
+    // acceptcall code
+    document.querySelector('#acceptVideoBtn').addEventListener('click', () => {
+      socket.emit('call-accept', {to: receiverId, from: currentUserId});
+      inCall = true;
+      hideIncomingCallingUI();
+      showcallingUI();
+      startVideoCall();
+      setTimeout(() => {
+        localVideo.classList.add('small')
+      }, 500);
+      document.querySelector('#calling-status').innerHTML = 'Connected';
+    })
+
+    // rejectcall code
+    document.querySelector('#rejectVideoBtn').addEventListener('click', () => {
+      socket.emit('call-reject', {to: receiverId, from: currentUserId})
+      hideIncomingCallingUI();
+      ringtone.pause();
+    })
+
+    if(!inCall) {
+      setTimeout(() => {
+        hideIncomingCallingUI();
+        ringtone.pause();
+      }, 20000);
+    }
+  })
+
+  socket.on('call-cencelled', ({ from }) => {
+    console.log('call cancelled by ', from);
+    hideIncomingCallingUI();
+    hangUp();
+    ringtone.pause();
+    ringtone.load();
+  })
+
+  socket.on('call-rejected', ({from}) => {
+    console.log('call rejected by', from);
+    document.querySelector('#calling-status').innerHTML = "Call Rejected"
+    setTimeout(() => {
+      hidecallingUI();
+    }, 2000);
+  })
+
+  socket.on('call-accepted', ({ from }) => {
+    showcallingUI();
+    startVideoCall();
+    setTimeout(() => {
+      localVideo.classList.add('small')
+    }, 500);
+    inCall = true;
+    document.querySelector('#calling-status').innerHTML = "Connected";
+    clearTimeout(callingTimeOut1)
+    ccallingTimeOut1 = null;
+    clearTimeout(callingTimeOut2)
+    callingTimeOut2 = null;
+  })
+
+  let localStream;
+  let remoteStream;
+  let peerConnection;
+  const serverSettings = {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" }
+    ]
+  };
+
+  const startVideoCall = async () => {
+    
+    // get user media
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+
+    // create peer connection
+    peerConnection = new RTCPeerConnection(serverSettings);
+    console.log('peer connection created');
+
+    // add localStream in peer connection;
+    localStream.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStream);
+    })
+
+    // add remoteStream in video tag
+    peerConnection.ontrack = (event) => {
+      remoteStream = event.streams[0];
+      remoteVideo.srcObject = remoteStream;
+    }
+
+    // sending ice candidate
+    peerConnection.onicecandidate = (event) => {
+      if(event.candidate) {
+        socket.emit('ice-candidate', {candidate: event.candidate, to: receiverId, from: currentUserId})
+      }
+    }
+
+    // create offer
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit('offer',{
+      offer,
+      to: receiverId,
+      from: currentUserId
+    })
+
+  }
+
+  // recieving offer
+  socket.on('offer', async ({ offer, from }) => {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+    // create answer
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('answer', {
+      answer,
+      to: receiverId,
+      from: currentUserId
+    })
+  })
+
+  socket.on('answer', async ({answer, from}) => {
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
+  })
+
+  // recieving ice candidate;
+  socket.on('ice-candidate', async ({candidate, from}) => {
+    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+  })
+
+  function hangUp() {
+    if (peerConnection) {
+        // ✅ Stop all local tracks
+        peerConnection.getSenders().forEach((sender) => {
+            if (sender.track) {
+                sender.track.stop();
+            }
+        });
+
+        // ✅ Remove all event listeners (optional but clean)
+        peerConnection.onicecandidate = null;
+        peerConnection.ontrack = null;
+        peerConnection.onconnectionstatechange = null;
+        peerConnection.oniceconnectionstatechange = null;
+
+        // ✅ Close the connection
+        peerConnection.close();
+
+        // ✅ Set reference to null
+        peerConnection = null;
+    }
+
+    // ✅ Also clear remote video stream if needed
+    if (remoteVideo && remoteVideo.srcObject) {
+        remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
+        remoteVideo.srcObject = null;
+    }
+
+    // ✅ And local video if you want
+    if (localVideo && localVideo.srcObject) {
+        localVideo.srcObject.getTracks().forEach((track) => track.stop());
+        localVideo.srcObject = null;
+    }
+
+    hidecallingUI();
+
+    // ✅ Clean any extra media stream references
+    localStream = null;
+    remoteStream = new MediaStream(); // fresh empty stream
+}
+
+
+  // toogle the mic;
+  document.querySelector('#toggleMic').addEventListener('click',function() {
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        document.querySelector('#toggleMic').innerHTML = `${audioTrack.enabled ? '<i class="ri-mic-fill text-xl"></i>' : '<i class="ri-mic-off-fill text-xl"></i>'}`
+    }
+  })
+
+  // toggle the speaker
+  document.querySelector('#toggleSpeaker').addEventListener('click', function() {
+    if (remoteVideo) {
+        remoteVideo.muted = !remoteVideo.muted;
+        document.querySelector('#toggleSpeaker').innerHTML = `${remoteVideo.muted ? '<i class="ri-volume-mute-fill text-xl"></i>' : '<i class="ri-volume-up-fill text-xl"></i>'}`
+    }
+  })
+
+
+  // toggle the local Video
+  document.querySelector('#toggleVideo').addEventListener('click', function() {
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+          videoTrack.enabled = !videoTrack.enabled;
+          document.querySelector('#toggleVideo').innerHTML = `${videoTrack.enabled ? '<i class="ri-video-on-fill text-xl"></i>' : '<i class="ri-video-off-fill text-xl"></i>'}`
+      }
+    })
+
+
+  window.onload = () => {
+    hangUp();
+  }
+
+  // ✅ Initial Load
+  loadMessages();
+
+  socket.on("error", (err) => {
+    // console.log("Socket error", err);
+  });
+</script>

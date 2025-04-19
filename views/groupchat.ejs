@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatsApp</title>
+    <link rel="icon" type="image/png" href="../images/chatsapp.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Comfortaa";
+        }
+        body {
+            background: url('/images/background-gif.gif');
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        @media (max-width: 1000px) {
+                .sidebar {
+                    width: 50%;
+                }
+                .searchuser_box {
+                    width: 50%;
+                }
+                .chat_box {
+                    width: 50%;
+                }
+            }
+            @media (max-width: 500px) {
+                .sidebar {
+                    width: 0;
+                    overflow: hidden;
+                    border-color: black;
+                }
+                .searchuser_box {
+                    width: 0;
+                }
+                .chat_box {
+                    width: 100%;
+                }
+            }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link
+    href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css"
+    rel="stylesheet"
+    />
+</head>
+<body>
+<div class="main-container flex h-screen w-full" style="background: rgba(0,0,0,.6);backdrop-filter: blur(1px);">
+    <%- include('components/sidebar', { users, groups }) %>
+    <%- include('components/group_chatbox', { senderUser, Currentgroup,nonGroupUsers }) %>
+</div>
+<%- include('partials/footer') %>

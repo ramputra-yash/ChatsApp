@@ -1,0 +1,128 @@
+<style>
+    .all_users {
+        height: calc(100% - 56px);
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    .all_users::-webkit-scrollbar {
+        width: 2px;
+    }
+    .all_users::-webkit-scrollbar-thumb {
+        background: #ccc;
+    }
+</style>
+<div class="sidebar w-1/3 border-r-1 border-zinc-500">
+    <div class="border-b-1 flex items-center justify-between border-zinc-500 h-[56px]" style="padding: 0 15px;" >
+        <a href="/chat">ChatsApp</a>
+        <div class="flex gap-3">
+            <button type="button" class="toggle-btn text-xl cursor-pointer">
+                <i class="ri-search-line"></i>
+            </button>
+            <button type="button" class="create_group_btn text-xl cursor-pointer">
+                <i class="ri-group-2-fill"></i>
+            </button>
+            <button type="button" class="profile_btn text-xl cursor-pointer">
+                <i class="ri-account-circle-fill"></i>
+            </button>
+        </div>
+    </div>
+    <div class="all_users flex gap-[5px] flex-col" style="padding: 5px;">
+        <% if (users.length < 1 && groups.length < 1) { %>
+            <div class="flex justify-center items-center h-full w-full">
+                <h1 class="text-2xl">No Chats Found</h1>
+            </div>
+        <% } else { %>
+            <% groups.reverse().forEach((group) => { %>
+                <%- include('group_card', { group }) %>
+            <% }) %>
+            <% users.reverse().forEach((user) => { %>
+                <%- include('user_card', { user }) %>
+            <% }) %>
+        <% } %>
+    </div>
+    <%- include('searchuser') %>
+    <%- include('createGroup') %>
+    <%- include('profileBox', { senderUser }) %>
+</div>
+<script>
+    // Sidebar toggle script
+    const sidebar = document.querySelector('.searchuser_box');
+    const toggleBtn = document.querySelector('.toggle-btn');
+
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        if(sidebar.classList.contains('open')) {
+            toggleBtn.querySelector('i').classList.remove('ri-search-line');
+            toggleBtn.querySelector('i').classList.add('ri-close-line');
+        } else{
+            toggleBtn.querySelector('i').classList.remove('ri-close-line');
+            toggleBtn.querySelector('i').classList.add('ri-search-line');
+        }
+    });
+    
+    // Group toggle script
+    const createGroup = document.querySelector('.create_group_box');
+    const createGroupBtn = document.querySelector('.create_group_btn');
+
+    createGroupBtn.addEventListener('click', () => {
+        createGroup.classList.toggle('open');
+        if(createGroup.classList.contains('open')) {
+            createGroupBtn.querySelector('i').classList.remove('ri-group-2-fill');
+            createGroupBtn.querySelector('i').classList.add('ri-close-line');
+        } else{
+            createGroupBtn.querySelector('i').classList.remove('ri-close-line');
+            createGroupBtn.querySelector('i').classList.add('ri-group-2-fill');
+        }
+    })
+
+
+    // Profile toggle script
+    const profileBox = document.querySelector('.profile_box');
+    const profileBtn = document.querySelector('.profile_btn');
+
+    profileBtn.addEventListener('click', () => {
+        profileBox.classList.toggle('open');
+        if(profileBox.classList.contains('open')) {
+            profileBtn.querySelector('i').classList.remove('ri-account-circle-fill');
+            profileBtn.querySelector('i').classList.add('ri-close-line');
+        } else{
+            profileBtn.querySelector('i').classList.remove('ri-close-line');
+            profileBtn.querySelector('i').classList.add('ri-account-circle-fill');
+        }
+    })
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var messageContainer = document.querySelector(".all_users");
+
+        if (messageContainer) {
+            // 🟢 Page reload hone ke baad scroll position restore karna
+            let savedScrollPosition = localStorage.getItem("scrollPosition");
+            if (savedScrollPosition) {
+                messageContainer.scrollTop = savedScrollPosition;
+            }
+
+            // 🟢 Jab user scroll kare, tab position save kare
+            messageContainer.addEventListener("scroll", function () {
+                localStorage.setItem("scrollPosition", messageContainer.scrollTop);
+            });
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        var parentDiv = document.querySelector(".all_users"); // 🟢 Parent div ko select karo
+
+        if (parentDiv) {
+            parentDiv.addEventListener("click", function (event) {
+                var clickedElement = event.target; // 🟢 Jis element par click hua use get karo
+                if (clickedElement.classList.contains(".user_card")) {
+                    var activeChild = parentDiv.querySelector(".active");
+                    if (activeChild) {
+                        activeChild.classList.remove("active");
+                    }
+                    clickedElement.classList.add("active");
+                }
+            });
+        }
+    });
+
+</script>

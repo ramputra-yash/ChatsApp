@@ -1,0 +1,239 @@
+<style>
+    .nonGroupUsers::-webkit-scrollbar {
+        width: 0;
+    }
+    .non_group_user {
+        position: relative;
+    }
+    .non_group_user::after {
+        content: "\EB7A"; /* NOT &#xEB7A; */
+        font-family: 'remixicon' !important;
+        height: 30px;
+        width: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(1, 197, 1);
+        transform: scale(0);
+        transition: .2s;
+        position: absolute;
+        right: 20px;
+    }
+    .non_group_user.active::after {
+        transform: scale(1);
+    }
+    .GroupUsers {
+        height: 0;
+        overflow: hidden;
+        transition: .4s;
+        overflow-y: auto;
+    }
+    .GroupUsers::-webkit-scrollbar {
+        width: 0;
+    }
+    .GroupUsers.active {
+        height: calc(100% - 55px);
+        overflow: auto;
+    }
+    .group_user {
+        position: relative;
+    }
+    .group_user::after {
+        content: "\EB7A"; /* NOT &#xEB7A; */
+        font-family: 'remixicon' !important;
+        height: 30px;
+        width: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(1, 197, 1);
+        transform: scale(0);
+        transition: .2s;
+        position: absolute;
+        right: 20px;
+    }
+    .group_user.active::after {
+        transform: scale(1);
+    }
+</style>
+<div class="w-[350px] relative flex flex-col bg-zinc-900 h-[550px]" style="box-shadow: 0 0 20px rgba(0,0,0,.2);z-index: 10;">
+    <div class="flex items-center justify-between" style="padding: 15px 20px;">
+        <h1 class="">All Members ( <%= Currentgroup.members.length %> ) </h1>
+        <% if(Currentgroup.createdBy._id.toString() === senderUser._id.toString()) { %>
+            <button type="button" class="delete_member_btn cursor-pointer">
+                <i class="ri-user-unfollow-line text-red-500"></i>
+            </button>
+        <% } %>
+    </div>
+    <hr class="w-full h-[2px] border-none outline-none bg-zinc-400">
+    <div class="GroupUsers z-[3] bg-zinc-900 flex flex-col absolute top-[55px] w-full">
+        <div class="h-full border-t-2 border-zinc-500">
+            <% Currentgroup.members.forEach((member) => { %>
+                <% if(member._id.toString() !== Currentgroup.createdBy._id.toString()){ %>
+                    <div class="group_user flex items-center gap-2 hover:bg-zinc-800 cursor-pointer" style="padding: 15px;">
+                        <img class="w-[35px] h-[35px] rounded-full object-cover" src="<%= member.profilePic %>" alt="">
+                        <div class="flex flex-col gap-1">
+                            <p class="group_user_id hidden"><%= member._id %></p>
+                            <h2><%= member.username %></h2>
+                        </div>
+                    </div>
+                <% } %>
+            <% }) %>
+        </div>
+        <% if(Currentgroup.createdBy._id.toString() === senderUser._id.toString()) { %>
+            <div class="flex flex-col gap-[10px]" style="padding: 10px;">
+                <button type="button" onclick="deleteSelectedUsers()" class="addMembersBtn cursor-pointer bg-red-500" style="padding: 10px;">
+                    <i class="ri-user-add-line"></i>
+                    Delete Members
+                </button>
+            </div>
+        <% } %>
+    </div>
+    <div class="nonGroupUsers w-full h-full flex flex-col overflow-y-auto h-full" style="padding: 10px;">
+        <div class="flex flex-col bg-zinc-800/50" style="margin-bottom: 10px;">
+            <div class="flex items-center gap-2 cursor-pointer" style="padding: 15px;">
+                <img class="w-[35px] h-[35px] rounded-full object-cover" src="<%= Currentgroup.createdBy.profilePic %>" alt="">
+                <div class="flex flex-col gap-1">
+                    <h2><%= Currentgroup.createdBy.username %> <span class="text-green-500">( Admin )</span></h2>
+                </div>
+            </div>
+            <% Currentgroup.members.forEach((member) => { %>
+                <% if(member._id.toString() !== Currentgroup.createdBy._id.toString()){ %>
+                    <div class="flex items-center gap-2 cursor-pointer" style="padding: 15px;">
+                        <img class="w-[35px] h-[35px] rounded-full object-cover" src="<%= member.profilePic %>" alt="">
+                        <div class="flex flex-col gap-1">
+                            <h2><%= member.username %></h2>
+                        </div>
+                    </div>
+                <% } %>
+            <% }) %>
+        </div>
+        <% if(nonGroupUsers.length < 1) { %>
+            <h1 class="text-center text-zinc-400" style="padding: 10px;">No Users Found To Add in group</h1>
+        <% } else { %>
+            <% nonGroupUsers.reverse().forEach((user) => { %>
+                <div class="non_group_user transition-all flex items-center gap-2 hover:bg-zinc-800 cursor-pointer" style="padding: 15px;">
+                    <img class="w-[35px] h-[35px] rounded-full object-cover" src="<%= user.profilePic %>" alt="">
+                    <div class="flex flex-col gap-1">
+                        <p class="non_group_user_id hidden"><%= user._id %></p>
+                        <h2><%= user.username %></h2>
+                    </div>
+                </div>
+            <% }) %>
+        <% } %>
+    </div>
+    <% if(Currentgroup.createdBy._id.toString() === senderUser._id.toString() && !nonGroupUsers.length < 1) { %>
+        <div class="flex flex-col gap-[10px]" style="padding: 10px;">
+            <button type="button" onclick="addSelectedMember()" class="addMembersBtn cursor-pointer bg-green-500" style="padding: 10px;">
+                <i class="ri-user-add-line"></i>
+                Add Members
+            </button>
+        </div>
+    <% } %>
+</div>
+<script>
+
+    // add members to the list of members
+    let AddSeletectedMember = []
+
+    document.querySelectorAll('.non_group_user').forEach((user) => {
+        user.addEventListener('click', () => {
+            user.classList.toggle('active');
+            let userId = user.querySelector('.non_group_user_id').textContent;
+            if(user.classList.contains('active')) {
+                AddSeletectedMember.push(userId);
+            } else {
+                AddSeletectedMember = AddSeletectedMember.filter((id) => id!== userId);
+            }
+            console.log('Add Selected Member:', AddSeletectedMember)
+        })
+    })
+
+    
+    // delete members to the list of members
+    document.querySelector('.delete_member_btn').addEventListener('click', () => {
+        document.querySelector('.GroupUsers').classList.toggle('active')
+                if(document.querySelector('.GroupUsers').classList.contains('active')) {
+            document.querySelector('.delete_member_btn').querySelector('i').classList.remove('ri-user-unfollow-line');
+            document.querySelector('.delete_member_btn').querySelector('i').classList.add('ri-close-line');
+        } else {
+            document.querySelector('.delete_member_btn').querySelector('i').classList.remove('ri-close-line');
+            document.querySelector('.delete_member_btn').querySelector('i').classList.add('ri-user-unfollow-line');
+        }
+    })
+
+    let deleteSelectedMembers = [];
+
+    document.querySelectorAll('.group_user').forEach((user) => {
+        user.addEventListener('click', () => {
+            user.classList.toggle('active');
+            let userId = user.querySelector('.group_user_id').textContent;
+            if(user.classList.contains('active')) {
+                deleteSelectedMembers.push(userId);
+            } else {
+                deleteSelectedMembers = deleteSelectedMembers.filter((id) => id!== userId);
+            }
+            console.log('Add Selected Member for Delete:', deleteSelectedMembers)
+        })
+    })
+
+    const addSelectedMember = async () => {
+        try {
+        const response = await fetch('/chat/group/<%= Currentgroup._id %>/addmembers',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ users: AddSeletectedMember }),
+            }
+        );
+        const data = await response.json();
+        console.log("Fetched Data from API:", data);
+        location.reload()
+
+        if (Array.isArray(data)) {
+            users = data;
+        } else if (data.users && Array.isArray(data.users)) {
+            users = data.users;
+        } else {
+            console.error("Invalid data format:", data);
+            return;
+        }
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+    }
+
+
+    const deleteSelectedUsers = async () => {
+        try {
+        const response = await fetch('/chat/group/<%= Currentgroup._id %>/deletemembers',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ users: deleteSelectedMembers }),
+            }
+        );
+        const data = await response.json();
+        console.log("Fetched Data from API:", data);
+        location.reload()
+
+        if (Array.isArray(data)) {
+            users = data;
+        } else if (data.users && Array.isArray(data.users)) {
+            users = data.users;
+        } else {
+            console.error("Invalid data format:", data);
+            return;
+        }
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+    }
+
+</script>

@@ -1,0 +1,9 @@
+<a href="/chat/group/<%= group._id %>" onclick="" class="user_card hover:bg-zinc-900 flex items-center gap-3" style="padding: 10px;">
+    <img class="w-[50px] rounded-full object-cover h-[50px]" src="<%= group.createdBy.profilePic || 'https://cdn.pixabay.com/photo/2016/11/14/17/39/group-1824145_640.png' %>" alt="">
+    <div class="flex flex-col gap-1 w-full">
+        <div class="flex items-center w-full justify-between">
+            <h1><%= group.name %> ( Group )</h1>
+        </div>
+        <p class="text-sm text-zinc-300"><%= group.members.length %> members</p>
+    </div>
+</a>

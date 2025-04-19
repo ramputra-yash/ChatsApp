@@ -1,0 +1,96 @@
+<style>
+    .searchuser_box {
+        height: 0;
+        overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: hidden;
+        transition: .5s;
+        backdrop-filter: blur(10px);
+    }
+    .searchuser_box.open {
+        height: calc(100% - 56px);
+        overflow: hidden;
+    }
+</style>
+<div class="searchuser_box flex flex-col top-[56px] z-3 fixed bg-zinc-900/80 w-1/4">
+    <div class="border-b-1 border-zinc-500" style="padding: 20px;">
+        <form action="" class="bg-zinc-900 overflow-hidden flex items-center border-b-1 h-[35px] w-full">
+            <i class="ri-search-line text-zinc-400" style="padding: 10px;"></i>
+            <input type="text" placeholder="Search..." class="searchusers w-full h-full outline-none">
+        </form>
+    </div>
+    <div class="all_users_search overflow-y-[auto] bg-black flex gap-[5px] flex-col">
+    </div>
+</div>
+<script>
+    document.querySelector('input').addEventListener('focus', () => {
+        document.querySelector('form').style.borderColor = "#0099ff";
+    })
+    const searchUserForSearch = document.querySelector('.searchusers')
+
+    async function fetchUsers() {
+    try {
+        const response = await fetch('/chat/users');
+        const data = await response.json();
+        console.log("Fetched Data from API for search:", data);
+
+        if (Array.isArray(data)) {
+            users = data;
+        } else if (data.users && Array.isArray(data.users)) {
+            users = data.users;
+        } else {
+            console.error("Invalid data format:", data);
+            return;
+        }
+
+        console.log("Processed Users:", users);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+}
+
+searchUserForSearch.addEventListener("input", () => {
+    const query = searchUserForSearch.value.toLowerCase().trim(); // Ensure extra spaces are trimmed
+    console.log("Search Query:", query);
+
+    document.querySelector('.all_users_search').innerHTML = "";
+
+    if (query && users.length > 0) {
+        console.log("Users Before Filtering:", users);
+
+        // Filter users based on username field
+        let filteredUsers = users.filter(user => 
+            user?.username?.toLowerCase().includes(query) // Use username for filtering
+        );
+        console.log("Filtered Users:", filteredUsers);
+
+        if (filteredUsers.length > 0) {
+            filteredUsers.forEach(user => {
+                const div = document.createElement("div");
+                div.innerHTML = `
+                    <a href="/chat/${user._id}" onclick="" class="user_card hover:bg-zinc-900 flex items-center gap-2" style="padding: 10px;">
+                        <img class="w-[50px] rounded-full object-cover h-[50px]" src="${user.profilePic}" alt="">
+                        <div class="flex flex-col gap-1 w-full">
+                            <div class="flex items-center w-full justify-between">
+                                <h1>${user.username}</h1>
+                                <span class="text-xs text-zinc-400">7:23 PM</span>
+                            </div>
+                            <p class="text-sm text-zinc-300">Ha bhai kya haal chaal</p>
+                        </div>
+                    </a>
+                `; // Show username
+                div.classList.add("cursor-pointer", "p-2", "hover:bg-zinc-700", "rounded-md");
+                div.onclick = () => toggleUserSelection(user.username, user.profilePic); // Toggle select/deselect user
+                document.querySelector('.all_users_search').appendChild(div);
+            });
+        } else {
+            console.warn("No matching users found.");
+        }
+    } else {
+        console.warn("No users available for search or empty query.");
+    }
+});
+
+fetchUsers()
+    
+</script>

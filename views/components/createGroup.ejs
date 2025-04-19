@@ -1,0 +1,189 @@
+<style>
+    .create_group_box {
+        height: 0;
+        overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: hidden;
+        transition: .5s;
+        padding: 0;
+        backdrop-filter: blur(10px);
+    }
+    .create_group_box.open {
+        height: calc(100% - 56px);
+        overflow: hidden;
+    }
+</style>
+<div class="create_group_box flex flex-col top-[56px] z-3 gap-2 fixed bg-zinc-900/80 w-1/4 p-4">
+    <div class="flex items-center justify-between mb-3" style="padding: 10px;">
+        <h1 class="text-white">Create Group</h1>
+        <button type="submit" onclick="createGroupFunction()" class="bg-blue-500 text-white cursor-pointer rounded-md px-4 py-2" style="padding: 5px 10px;">Create</button>
+    </div>
+    <div class="mb-3" style="padding:0 10px;">
+        <input type="text" name="group_name" placeholder="Group Name" style="padding: 10px;" class="bg-zinc-800 outline-none text-white rounded-md w-full p-2" required>
+    </div>
+    <div class="mb-3" style="padding:0 10px;">
+        <h2 class="text-white">Selected Users:</h2>
+        <ul id="selectedUsers" class="bg-zinc-800 rounded-md flex flex-col gap-2 text-white p-2 max-h-40 overflow-auto">
+            <!-- Selected users will be appended here -->
+        </ul>
+    </div>
+    <div class="mb-3" style="padding:0 10px;">
+        <input type="text" id="searchUser" style="padding: 10px; margin-bottom: 5px;" placeholder="Search User" class="bg-zinc-800 outline-none text-white rounded-md w-full p-2">
+        <div id="searchResults" class="mt-2 bg-zinc-800 rounded-md text-white p-2 max-h-40 overflow-auto">
+
+        </div>
+    </div>
+</div>
+
+<script>
+const searchInput = document.getElementById("searchUser");
+const searchResults = document.getElementById("searchResults");
+const selectedUsers = document.getElementById("selectedUsers");
+let users = [];
+let selectedUser = [];
+
+// use this function to fetch users from the server
+async function fetchUsers() {
+    try {
+        const response = await fetch('/chat/users');
+        const data = await response.json();
+        console.log("Fetched Data from API:", data);
+
+        if (Array.isArray(data)) {
+            users = data;
+        } else if (data.users && Array.isArray(data.users)) {
+            users = data.users;
+        } else {
+            console.error("Invalid data format:", data);
+            return;
+        }
+
+        console.log("Processed Users:", users);
+    } catch (error) {
+        console.error("Error fetching users:", error);
+    }
+}
+
+// Event listener for search input
+searchInput.addEventListener("input", () => {
+    const query = searchInput.value.toLowerCase().trim(); // Ensure extra spaces are trimmed
+    console.log("Search Query:", query);
+
+    searchResults.innerHTML = "";
+
+    if (query && users.length > 0) {
+        console.log("Users Before Filtering:", users);
+
+        // Filter users based on username field
+        let filteredUsers = users.filter(user => 
+            user?.username?.toLowerCase().includes(query) // Use username for filtering
+        );
+        console.log("Filtered Users:", filteredUsers);
+
+        if (filteredUsers.length > 0) {
+            filteredUsers.forEach(user => {
+                const div = document.createElement("div");
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 hover:bg-zinc-900" style="padding: 10px;">
+                        <img class="w-[30px] rounded-full h-[30px]" src="${user.profilePic}" alt="">
+                        <span class="ml-2">${user.username}</span>
+                    </div>
+                `; // Show username
+                div.classList.add("cursor-pointer", "p-2", "hover:bg-zinc-700", "rounded-md");
+                div.onclick = () => toggleUserSelection(user._id, user.username, user.profilePic); // Toggle select/deselect user
+                searchResults.appendChild(div);
+            });
+        } else {
+            console.warn("No matching users found.");
+        }
+    } else {
+        console.warn("No users available for search or empty query.");
+    }
+});
+
+// Function to toggle user selection
+function toggleUserSelection(userId, username, profilePic) {
+    const selectedUserList = [...selectedUsers.children]; // Get selected users as array
+    const isUserAlreadySelected = selectedUser.includes(userId);
+
+    if (isUserAlreadySelected) {
+        // ✅ Remove from selected users list
+        selectedUser = selectedUser.filter(id => id !== userId);
+        const userToRemove = selectedUserList.find(li => li.dataset.userId === userId);
+        if (userToRemove) selectedUsers.removeChild(userToRemove);
+        console.log("Removed:", userId, "Current Selected Users:", selectedUser)
+    } else {
+        // ✅ Add to selected users list
+        selectedUser.push(userId);
+
+        const li = document.createElement("li");
+        li.dataset.userId = userId; // Store user ID
+        li.innerHTML = `
+            <div class="flex items-center justify-between gap-2 hover:bg-zinc-900" style="padding: 10px;">
+                <div class="flex items-center gap-2">
+                    <img class="w-[30px] rounded-full h-[30px]" src="${profilePic}" alt="">
+                    <span class="ml-2">${username}</span>
+                </div>
+                <button onclick="toggleUserSelection('${userId}', '${username}', '${profilePic}')" class="ml-auto cursor-pointer text-red-500">
+                    <i class="ri-close-line"></i>    
+                </button>
+            </div>
+        `;
+        li.classList.add("p-2", "rounded-md", "bg-blue-500", "text-white", "mb-1");
+        selectedUsers.appendChild(li);
+        
+        console.log("Selected Users:", selectedUser);
+    }
+}
+
+//create group feature
+const createGroupFunction = async () => {
+    const groupNameInput = document.querySelector('input[name="group_name"]');
+    const groupName = groupNameInput.value.trim();
+
+    console.log("📌 Selected Users before sending:", selectedUser); // ✅ Debugging
+
+    if (!groupName) return alert("❌ Group name is required!");
+    if (!Array.isArray(selectedUser) || selectedUser.length === 0) {
+        return alert("❌ At least one member is required!");
+    }
+
+    try {
+        const response = await fetch('/chat/create-group', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: groupName,
+                members: selectedUser, // User IDs array to create group with
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unknown error occurred");
+
+        console.log("✅ Group Created:", data);
+        console.log("📌 Data being sent:", { groupName, members: selectedUser });
+        alert("✅ Group Created Successfully!");
+
+        // ✅ UI Cleanup
+        document.querySelector('.create_group_box').classList.remove('open');
+        groupNameInput.value = "";
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+        selectedUsers.innerHTML = '';
+        selectedUser = [];
+        location.reload();
+
+    } catch (error) {
+        console.error("❌ Error creating group:", error);
+        alert(`❌ Error: ${error.message}`);
+    }
+};
+
+
+// Fetch users when the page loads
+fetchUsers();
+
+</script>
+
+

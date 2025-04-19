@@ -1,0 +1,26 @@
+<style>
+    .profile_box {
+        height: 0;
+        overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: hidden;
+        transition: .5s;
+        backdrop-filter: blur(10px);
+    }
+    .profile_box.open {
+        height: calc(100% - 56px);
+        overflow: hidden;
+    }
+</style>
+<div class="profile_box flex flex-col top-[56px] z-3 fixed bg-zinc-900/80 w-1/4">
+    <div class="w-full flex flex-col items-center justify-center gap-5" style="padding: 60px 0;">
+        <img class="w-[200px] h-[200px] rounded-full object-cover" src="<%= senderUser.profilePic %>" alt="" style="border: 6px solid rgba(0, 0, 0, 0);box-shadow: 0 0 20px rgb(0, 132, 255);">
+        <div class="flex items-center justify-center flex-col gap-2">   
+            <h1 class="text-2xl"><%= senderUser.username %></h1>
+            <p><%= senderUser.email %></p>
+        </div>
+        <a href="/auth/logout">
+            <button type="button" class="bg-red-500 hover:bg-red-700 transition-all text-white rounded-md cursor-pointer" style="padding: 10px 20px;">Logout <i class="ri-logout-box-r-line"></i></button>
+        </a>
+    </div>
+</div>

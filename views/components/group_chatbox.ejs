@@ -1,0 +1,165 @@
+<style>
+    .editGroup_box {
+        opacity: 0;
+        visibility: hidden;
+        transition: .4s;
+        height: 0;
+        overflow: hidden;
+    }
+    .editGroup_box.active {
+        height: 100%;
+        opacity: 1;
+        visibility: visible;
+    }
+    .message_containers::-webkit-scrollbar {
+    width: 5px;
+    }
+    .message_containers::-webkit-scrollbar-thumb {
+        background: #3f3f3f;
+    }
+</style>
+<div class="chat_box relative w-full flex flex-col h-full overflow-hidden">
+    <div class="w-full flex justify-between items-center border-b-1 border-zinc-500" style="padding: 15px 20px;">
+        <div class="flex items-center gap-[10px]">
+            <a href="/chat">
+                <i class="ri-arrow-left-s-line"></i>
+            </a>
+            <img class="w-[40px] h-[40px] object-cover rounded-full" src="<%= Currentgroup.createdBy.profilePic || 'https://cdn.pixabay.com/photo/2016/11/14/17/39/group-1824145_640.png' %>" alt="">
+            <div>
+                <h1><%= Currentgroup.name %> ( Group )</h1>
+                <p class="text-xs text-zinc-400"><%= Currentgroup.members.length %> members</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="editGroup_box_btn h-[40px] cursor-pointer w-[40px] flex items-center justify-center hover:bg-zinc-900 block">
+                <i class="ri-group-2-fill"></i>
+            </button>
+        </div>
+    </div>
+    <div class="editGroup_box w-full absolute z-2 top-[72px] h-full flex items-center justify-center bg-zinc-800/50" style="backdrop-filter: blur(6px);height: calc(100% - 72px);">
+        <%- include('editGroup',{ senderUser, Currentgroup, nonGroupUsers}) %>
+    </div>
+    <div id="chatContainer" class="message_containers z-1 flex flex-col gap-2 h-full overflow-y-scroll" style="padding: 10px;">
+        <%- include('loader') %>
+    </div>
+    <div class="flex border-t-1 border-zinc-500" style="padding: 10px;padding-left: 20px;">
+        <input type="text" id="messageInput" placeholder="Type a message..." class="w-full outline-none">
+        <button type="button" onclick="sendMessage()" class="w-[40px] h-[40px] cursor-pointer bg-blue-600">
+            <i class="ri-send-plane-fill"></i>
+        </button>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var messageContainer = document.querySelector(".message_containers");
+        if (messageContainer) {
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+    });
+
+    document.querySelector('.editGroup_box_btn').addEventListener('click', () => {
+        document.querySelector('.editGroup_box').classList.toggle('active');
+        if(document.querySelector('.editGroup_box').classList.contains('active')) {
+            document.querySelector('.editGroup_box_btn').querySelector('i').classList.remove('ri-group-2-fill');
+            document.querySelector('.editGroup_box_btn').querySelector('i').classList.add('ri-close-line');
+        } else {
+            document.querySelector('.editGroup_box_btn').querySelector('i').classList.remove('ri-close-line');
+            document.querySelector('.editGroup_box_btn').querySelector('i').classList.add('ri-group-2-fill');
+        }
+    })
+
+    const socket = io();
+
+    const groupId = '<%= Currentgroup._id %>';
+    const userId = '<%= senderUser._id %>'; // Logged-in user ID
+    const chatContainer = document.getElementById('chatContainer');
+
+    socket.emit('join-group', { groupId, userId });
+    
+    // load messages function
+    async function loadMessages() {
+    try {
+        const response = await fetch(`/chat/group/${groupId}/groupmessages`);
+        const messages = await response.json();
+
+        console.log(messages, "messages from server");
+
+        chatContainer.innerHTML = ""; // ✅ Clear previous messages
+
+        messages.forEach((msg) => {
+            const senderUserName = msg.sender._id === userId ? "You" : msg.sender.username || "Unknown User"; // ✅ Fallback to "Unknown User"
+            displayMessage(msg, msg.sender._id === userId, senderUserName);
+        });
+
+        scrollToBottom(); // 🔽 Auto-scroll
+    } catch (error) {
+        console.error("Error loading messages:", error);
+    }
+}
+
+
+function sendMessage() {
+    const content = document.getElementById('messageInput').value.trim();
+    if (!content) return;
+
+    socket.emit('send-message', { groupId, userId, content });
+
+    displayMessage({ text: content, timestamp: new Date() }, true);
+
+    document.getElementById('messageInput').value = '';
+    scrollToBottom();
+}
+
+function displayMessage(message, isOutgoing, senderUserName) {
+    const div = document.createElement("div");
+    div.classList.add("w-full", "flex", "items-center", isOutgoing ? "justify-end" : "justify-start");
+
+    div.innerHTML = `
+        <div class="flex flex-col ${isOutgoing ? 'items-end' : ''}">
+            <span class="text-[8px] ">${senderUserName}</span>
+            <div class="${isOutgoing ? "bg-blue-600" : "bg-zinc-900"} flex items-end gap-2 w-[fit-content] relative max-w-[330px]" 
+                style="padding: 6px 12px; border-radius: ${isOutgoing ? "10px 0px 10px 10px" : "0px 10px 10px 10px"};">
+                <h1>${message.text}</h1>
+                <span class="text-[8px] ${isOutgoing ? 'right-2' : 'left-2'}">${formatMongoDate(message.timestamp || message.createdAt)}</span>
+            </div>
+        </div>
+    `;
+
+    chatContainer.appendChild(div);
+    scrollToBottom();
+}
+
+// conver mongodb date to dd/mm/yy format
+function formatMongoDate(isoDate) {
+    if (!isoDate) return ""; // ✅ Blank string instead of "N/A"
+
+    const date = new Date(isoDate);
+    if (isNaN(date.getTime())) return ""; // ✅ Invalid date handle karein
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}/${month}/${year}`;
+}
+
+socket.on('receive-message', (msg) => {
+    if (msg.sender !== userId) {
+        displayMessage(msg, false);
+    }
+});
+
+socket.on('error', (msg) => {
+    alert(msg);
+});
+
+// call the load messages function 
+loadMessages()
+
+function scrollToBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+
+</script>

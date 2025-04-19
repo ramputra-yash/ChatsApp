@@ -1,0 +1,22 @@
+<a href="/chat/<%= user._id %>" onclick="loadChat('<%= user._id %>')" class="user_card hover:bg-zinc-900 flex items-center gap-3" style="padding: 10px;">
+    <img class="w-[50px] rounded-full object-cover h-[50px]" src="<%- user.profilePic || 'https://static.vecteezy.com/system/resources/previews/036/594/092/non_2x/man-empty-avatar-photo-placeholder-for-social-networks-resumes-forums-and-dating-sites-male-and-female-no-photo-images-for-unfilled-user-profile-free-vector.jpg' %>" alt="">
+    <div class="flex flex-col gap-1 w-full">
+        <div class="flex items-center w-full justify-between">
+            <h1><%= user.username %></h1>
+        </div>
+    </div>
+</a>
+<script>
+
+    
+    function loadChat(userId) {
+        fetch(`/chat/${userId}`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('chatContainer').innerHTML = html;
+            document.querySelector('span').innerHTML = localStorage.getItem(`lastSeen-${userId}`) || localStorage.getItem(`onlineStatus-${userId}`);
+            // Socket.IO connection will remain active
+        })
+        .catch(error => console.error("Error loading chat:", error));
+    }
+</script>

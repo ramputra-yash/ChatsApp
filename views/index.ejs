@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+<div class="main-container h-screen w-full" style="background: rgba(0,0,0,.6);backdrop-filter: blur(1px);">
+    <%- include('components/navbar') %>
+    <div class="w-full flex items-center justify-center gap-9 flex-col" style="height: calc(100% - 70px);">
+        <div class="flex flex-col items-center">
+            <h1 class="text-[10vw] font-bold" style="line-height: 1;">Welcome to</h1>
+            <h1 class="text-[10vw] font-bold" style="line-height: 1;">ChatsApp</h1>
+        </div>
+        <a href="/auth/google" class="flex gap-1 items-center bg-zinc-900 rounded-lg hover:bg-white hover:text-black font-semibold" style="padding: 5px 40px 5px 20px;box-shadow: 3px 3px 0 rgb(161, 161, 161);transition: .4s;">
+            <img class="w-[50px]" src="/images/Google_Icon.webp" alt="">
+            <h1>Continue with Google</h1>
+        </a>
+    </div>
+</div>
+<%- include('partials/footer') %>

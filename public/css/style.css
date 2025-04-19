@@ -1,0 +1,42 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Comfortaa";
+}
+body {
+    background: url('../images/background-gif.gif');
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.5;
+}
+.message_containers::-webkit-scrollbar {
+    width: 5px;
+}
+.message_containers::-webkit-scrollbar-thumb {
+    background: #ccc;
+}
+
+@media (max-width: 1000px) {
+    .sidebar {
+        width: 50%;
+    }
+    .searchuser_box,.create_group_box, .profile_box {
+        width: 50%;
+    }
+    .chat_box {
+        width: 50%;
+    }
+}
+@media (max-width: 500px) {
+    .sidebar {
+        width: 100%;
+        border-color: black;
+    }
+    .searchuser_box,.create_group_box, .profile_box {
+        width: 100%;
+    }
+    .chat_box {
+        width: 0%;
+    }
+}

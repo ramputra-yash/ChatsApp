@@ -1,0 +1,14 @@
+<div id="receiveVideoModal" class="w-full flex items-center justify-center absolute z-2 bg-zinc-900/50 bottom-0" style="height: calc(100% - 72px);backdrop-filter: blur(20px);display: none;">
+    <div class="max-w-[400px] w-full flex flex-col items-center justify-center h-[fit-content] gap-4" style="padding: 20px;">
+        <img src="<%= receiverUser.profilePic %>" class="h-[150px] w-[150px] rounded-full" alt="">
+        <p> Video Call from <span id="v-callerName"><%= receiverUser.username %></span></p>
+        <div class="w-full flex gap-4 items-center justify-center">
+            <button class="bg-green-600 rounded-lg" style="padding: 10px 15px;" id="acceptVideoBtn">
+                Accept
+            </button>
+            <button class="bg-red-600 rounded-lg" style="padding: 10px 15px;" id="rejectVideoBtn">
+                Decline
+            </button>
+        </div>
+    </div>
+</div>
