@@ -469,20 +469,50 @@
 
   // recieving offer
   socket.on('offer', async ({ offer, from }) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+// ✅ PeerConnection create if not exists
+  if (!peerConnection) {
+    peerConnection = new RTCPeerConnection(serverSettings);
 
-    // create answer
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    socket.emit('answer', {
-      answer,
-      to: receiverId,
-      from: currentUserId
-    })
+    peerConnection.ontrack = (event) => {
+      remoteStream = event.streams[0];
+      remoteVideo.srcObject = remoteStream;
+    };
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { candidate: event.candidate, to: from, from: currentUserId });
+      }
+    };
+
+    // ✅ Local media set if not already
+    if (!localStream) {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localVideo.srcObject = localStream;
+    }
+
+    localStream.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStream);
+    });
+  }
+
+  // ✅ NOW set remote description
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+  // ✅ Then create answer
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+
+  socket.emit('answer', {
+    answer,
+    to: from,
+    from: currentUserId
+  });
   })
 
   socket.on('answer', async ({answer, from}) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
+    if (peerConnection && peerConnection.signalingState === "have-local-offer") {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    }
   })
 
   // recieving ice candidate;
